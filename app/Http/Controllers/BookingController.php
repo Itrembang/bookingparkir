@@ -22,7 +22,8 @@ class BookingController extends Controller
         //
     }
 
-    public function readBookingActiveByUserId($userId) {
+    public function readBookingActiveByUserId($userId)
+    {
         $httpcode = 500;
         $response = array(
             "Code" => 1,
@@ -33,32 +34,32 @@ class BookingController extends Controller
 
         try {
             $booking = DB::table('TR_Booking')
-            ->join('MS_User', 'MS_User.Id', '=', 'TR_Booking.UserId')
-            ->join('MS_ZoneDetail', 'MS_ZoneDetail.Id', '=', 'TR_Booking.ZoneDetailId')
-            ->join('MS_Zone', 'MS_Zone.Id', '=', 'MS_ZoneDetail.ZoneId')
-            ->join('MS_Device', 'MS_Device.Id', '=', 'MS_ZoneDetail.DeviceId')
-            ->where('TR_Booking.UserId', $userId)
-            ->whereIn('TR_Booking.Status', [0,1])
-            ->orderBy('TR_Booking.InputTime', 'DESC')
-            ->select(
-                'TR_Booking.Id as Id',
-                'TR_Booking.UserId as UserId',
-                'MS_User.FullName as UserFullname',
-                'TR_Booking.ZoneDetailId as ZoneDetailId',
-                'MS_ZoneDetail.Name as ZoneDetailName',
-                'MS_ZoneDetail.ZoneId as ZoneId',
-                'MS_Zone.Name as ZoneName',
-                'MS_ZoneDetail.DeviceId as DeviceId',
-                'MS_Device.Name as DeviceName',
-                'TR_Booking.Status as StatusId',
-                DB::raw('(CASE WHEN TR_Booking.Status = 0 THEN \'OPEN\' WHEN TR_Booking.Status = 1 THEN \'IN PROGRESS\' WHEN TR_Booking.Status = 2 THEN \'DONE\' ELSE \'EXPIRED\' END) as StatusName'),
-                DB::raw('ADDTIME(CONVERT_TZ(TR_Booking.InputTime,\'+00:00\',\'+07:00\'), "2:0:0") as ExpiredTime'),
-                DB::raw('CONVERT_TZ(TR_Booking.ModifTime,\'+00:00\',\'+07:00\') as LastAction'),
-                DB::raw('TIME_TO_SEC(TIMEDIFF(CONVERT_TZ(CURRENT_TIMESTAMP,\'+00:00\',\'+07:00\'), CONVERT_TZ(TR_Booking.InputTime,\'+00:00\',\'+07:00\'))) as AllDuration'),
-                DB::raw('TIME_TO_SEC(TIMEDIFF(CONVERT_TZ(CURRENT_TIMESTAMP,\'+00:00\',\'+07:00\'), CONVERT_TZ(TR_Booking.ModifTime,\'+00:00\',\'+07:00\'))) as DurationPerAction'),
-                DB::raw('null as BookingDetail')
-            )
-            ->first();
+                ->join('MS_User', 'MS_User.Id', '=', 'TR_Booking.UserId')
+                ->join('MS_ZoneDetail', 'MS_ZoneDetail.Id', '=', 'TR_Booking.ZoneDetailId')
+                ->join('MS_Zone', 'MS_Zone.Id', '=', 'MS_ZoneDetail.ZoneId')
+                ->join('MS_Device', 'MS_Device.Id', '=', 'MS_ZoneDetail.DeviceId')
+                ->where('TR_Booking.UserId', $userId)
+                ->whereIn('TR_Booking.Status', [0, 1])
+                ->orderBy('TR_Booking.InputTime', 'DESC')
+                ->select(
+                    'TR_Booking.Id as Id',
+                    'TR_Booking.UserId as UserId',
+                    'MS_User.FullName as UserFullname',
+                    'TR_Booking.ZoneDetailId as ZoneDetailId',
+                    'MS_ZoneDetail.Name as ZoneDetailName',
+                    'MS_ZoneDetail.ZoneId as ZoneId',
+                    'MS_Zone.Name as ZoneName',
+                    'MS_ZoneDetail.DeviceId as DeviceId',
+                    'MS_Device.Name as DeviceName',
+                    'TR_Booking.Status as StatusId',
+                    DB::raw('(CASE WHEN TR_Booking.Status = 0 THEN \'OPEN\' WHEN TR_Booking.Status = 1 THEN \'IN PROGRESS\' WHEN TR_Booking.Status = 2 THEN \'DONE\' ELSE \'EXPIRED\' END) as StatusName'),
+                    DB::raw('ADDTIME(CONVERT_TZ(TR_Booking.InputTime,\'+00:00\',\'+07:00\'), "2:0:0") as ExpiredTime'),
+                    DB::raw('CONVERT_TZ(TR_Booking.ModifTime,\'+00:00\',\'+07:00\') as LastAction'),
+                    DB::raw('TIME_TO_SEC(TIMEDIFF(CONVERT_TZ(CURRENT_TIMESTAMP,\'+00:00\',\'+07:00\'), CONVERT_TZ(TR_Booking.InputTime,\'+00:00\',\'+07:00\'))) as AllDuration'),
+                    DB::raw('TIME_TO_SEC(TIMEDIFF(CONVERT_TZ(CURRENT_TIMESTAMP,\'+00:00\',\'+07:00\'), CONVERT_TZ(TR_Booking.ModifTime,\'+00:00\',\'+07:00\'))) as DurationPerAction'),
+                    DB::raw('null as BookingDetail')
+                )
+                ->first();
 
             if (empty($booking)) {
                 $response["Message"] = "SUCCESS but Table Empty";
@@ -74,10 +75,10 @@ class BookingController extends Controller
                             'Status' => 3,
                             'ModifUN' => $UN
                         ]);
-            
+
                         if ($affected < 1)
                             throw new Exception("Update Failed with affected < 1");
-            
+
                         DB::table('TR_BookingDetail')->insert([
                             'BookingId' => $booking->Id,
                             'Status' => 3,
@@ -86,33 +87,33 @@ class BookingController extends Controller
 
                         $booking->StatusId = 3;
                         $booking->StatusName = 'EXPIRED';
-                        $booking->LastAction = (string)date('Y-m-d H:i:s');
+                        $booking->LastAction = (string) date('Y-m-d H:i:s');
                         $booking->DurationPerAction = 1;
                     }
                 }
 
                 $bookingDetail = DB::table('TR_BookingDetail')
-                ->join('TR_Booking', 'TR_Booking.Id', '=', 'TR_BookingDetail.BookingId')
-                ->where('TR_BookingDetail.BookingId', $booking->Id)
-                ->select(
-                    'TR_BookingDetail.Id as Id',
-                    'TR_BookingDetail.BookingId as BookingId',
-                    'TR_BookingDetail.Status as StatusId',
-                    DB::raw('(CASE WHEN TR_BookingDetail.Status = 0 THEN \'OPEN\' WHEN TR_BookingDetail.Status = 1 THEN \'IN PROGRESS\' WHEN TR_BookingDetail.Status = 2 THEN \'DONE\' ELSE \'EXPIRED\' END) as StatusName'),
-                    DB::raw('CONVERT_TZ(TR_BookingDetail.InputTime,\'+00:00\',\'+07:00\') as ActionTime')
-                )
-                ->get();
-                
+                    ->join('TR_Booking', 'TR_Booking.Id', '=', 'TR_BookingDetail.BookingId')
+                    ->where('TR_BookingDetail.BookingId', $booking->Id)
+                    ->select(
+                        'TR_BookingDetail.Id as Id',
+                        'TR_BookingDetail.BookingId as BookingId',
+                        'TR_BookingDetail.Status as StatusId',
+                        DB::raw('(CASE WHEN TR_BookingDetail.Status = 0 THEN \'OPEN\' WHEN TR_BookingDetail.Status = 1 THEN \'IN PROGRESS\' WHEN TR_BookingDetail.Status = 2 THEN \'DONE\' ELSE \'EXPIRED\' END) as StatusName'),
+                        DB::raw('CONVERT_TZ(TR_BookingDetail.InputTime,\'+00:00\',\'+07:00\') as ActionTime')
+                    )
+                    ->get();
+
                 if (!empty($bookingDetail))
                     $booking->BookingDetail = $bookingDetail;
 
                 $response["Data"] = $booking;
                 $response["Message"] = "SUCCESS";
             }
-                
+
             $response["Code"] = 0;
             $httpcode = 200;
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             $response["Code"] = 1;
             $response["Error"] = $e->getMessage();
             $response["Message"] = "";
@@ -122,7 +123,8 @@ class BookingController extends Controller
         return response()->json($response, $httpcode);
     }
 
-    public function createBooking(Request $request) {
+    public function createBooking(Request $request)
+    {
         $httpcode = 500;
         $response = array(
             "Code" => 1,
@@ -162,9 +164,9 @@ class BookingController extends Controller
                 throw new Exception("Zone Detail not Found");
 
             $zoneDetailAvailable = DB::table('TR_Booking')
-            ->where('ZoneDetailId', $zoneDetailId)
-            ->whereIn('Status', [0,1])
-            ->count();
+                ->where('ZoneDetailId', $zoneDetailId)
+                ->whereIn('Status', [0, 1])
+                ->count();
 
             if ($zoneDetailAvailable > 0)
                 throw new Exception("Zone Detail already use");
@@ -189,7 +191,7 @@ class BookingController extends Controller
             $response["Code"] = 0;
             $response["Message"] = "SUCCESS";
             $httpcode = 200;
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             $response["Code"] = 1;
             $response["Error"] = $e->getMessage();
             $response["Message"] = "";
@@ -199,7 +201,8 @@ class BookingController extends Controller
         return response()->json($response, $httpcode);
     }
 
-    public function checkInBooking(Request $request) {
+    public function checkInBooking(Request $request)
+    {
         $httpcode = 500;
         $response = array(
             "Code" => 1,
@@ -227,11 +230,11 @@ class BookingController extends Controller
                 throw new Exception("User not Found");
 
             $booking = DB::table('TR_Booking')
-            ->where([
-                ['UserId', '=', $userId],
-            ])
-            ->orderByDesc('InputTime')
-            ->first();
+                ->where([
+                    ['UserId', '=', $userId],
+                ])
+                ->orderByDesc('InputTime')
+                ->first();
 
             if ($booking == null || $booking->Status != 0)
                 throw new Exception("Booking Status Invalid");
@@ -239,18 +242,18 @@ class BookingController extends Controller
             // ====================================
             // Function MQTT
             $devices = DB::table('MS_Device')
-            ->join('MS_ZoneDetail', 'MS_Device.Id', '=', 'MS_ZoneDetail.DeviceId')
-            ->where('MS_ZoneDetail.Id', $booking->ZoneDetailId)
-            ->select('MS_Device.Code')
-            ->first();
+                ->join('MS_ZoneDetail', 'MS_Device.Id', '=', 'MS_ZoneDetail.DeviceId')
+                ->where('MS_ZoneDetail.Id', $booking->ZoneDetailId)
+                ->select('MS_Device.Code')
+                ->first();
 
 
             $url = "broker.hivemq.com";
             $port = "1883";
-            $topic = "/".$devices->Code."/booking/pulldown";
+            $topic = "/" . $devices->Code . "/booking/pulldown";
             $message = $this->getRandomCode(10);
             $clientId = $this->getRandomCode(16);
-            
+
             DB::table('TR_LogTransactionDevice')->insert([
                 'RandomCode' => $message,
                 'Status' => null
@@ -264,7 +267,7 @@ class BookingController extends Controller
                 throw new Exception("Failed Check In");
             }
             $logResult = false;
-            for ($i=0; $i < 100000; $i++) { 
+            for ($i = 0; $i < 100000; $i++) {
                 $resultTransaction = DB::table('TR_LogTransactionDevice')->where('RandomCode', $message)->select('Status')->first();
                 if ($resultTransaction->Status != null && $resultTransaction->Status == 'SUCCESS') {
                     $logResult = true;
@@ -278,7 +281,7 @@ class BookingController extends Controller
             if (!$logResult)
                 throw new Exception("Failed Check In");
             // ====================================
-            
+
             $affected = DB::table('TR_Booking')->where('Id', $booking->Id)->update([
                 'Status' => 1,
                 'ModifUN' => $UN
@@ -292,11 +295,11 @@ class BookingController extends Controller
                 'Status' => 1,
                 'InputUN' => $UN
             ]);
-            
+
             $response["Code"] = 0;
             $response["Message"] = "SUCCESS";
             $httpcode = 200;
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             $response["Code"] = 1;
             $response["Error"] = $e->getMessage();
             $response["Message"] = "";
@@ -306,7 +309,8 @@ class BookingController extends Controller
         return response()->json($response, $httpcode);
     }
 
-    public function checkOutBooking(Request $request) {
+    public function checkOutBooking(Request $request)
+    {
         $httpcode = 500;
         $response = array(
             "Code" => 1,
@@ -334,11 +338,11 @@ class BookingController extends Controller
                 throw new Exception("User not Found");
 
             $booking = DB::table('TR_Booking')
-            ->where([
-                ['UserId', '=', $userId],
-            ])
-            ->orderByDesc('InputTime')
-            ->first();
+                ->where([
+                    ['UserId', '=', $userId],
+                ])
+                ->orderByDesc('InputTime')
+                ->first();
 
             if ($booking == null || $booking->Status != 1)
                 throw new Exception("Booking Status Invalid");
@@ -346,18 +350,18 @@ class BookingController extends Controller
             // ====================================
             // Function MQTT
             $devices = DB::table('MS_Device')
-            ->join('MS_ZoneDetail', 'MS_Device.Id', '=', 'MS_ZoneDetail.DeviceId')
-            ->where('MS_ZoneDetail.Id', $booking->ZoneDetailId)
-            ->select('MS_Device.Code')
-            ->first();
+                ->join('MS_ZoneDetail', 'MS_Device.Id', '=', 'MS_ZoneDetail.DeviceId')
+                ->where('MS_ZoneDetail.Id', $booking->ZoneDetailId)
+                ->select('MS_Device.Code')
+                ->first();
 
 
             $url = "broker.hivemq.com";
             $port = "1883";
-            $topic = "/".$devices->Code."/booking/pulldown";
+            $topic = "/" . $devices->Code . "/booking/pullup";
             $message = $this->getRandomCode(10);
             $clientId = $this->getRandomCode(16);
-            
+
             DB::table('TR_LogTransactionDevice')->insert([
                 'RandomCode' => $message,
                 'Status' => null
@@ -371,7 +375,7 @@ class BookingController extends Controller
                 throw new Exception("Failed Check Out");
             }
             $logResult = false;
-            for ($i=0; $i < 100000; $i++) { 
+            for ($i = 0; $i < 100000; $i++) {
                 $resultTransaction = DB::table('TR_LogTransactionDevice')->where('RandomCode', $message)->select('Status')->first();
                 if ($resultTransaction->Status != null && $resultTransaction->Status == 'SUCCESS') {
                     $logResult = true;
@@ -399,11 +403,11 @@ class BookingController extends Controller
                 'Status' => 2,
                 'InputUN' => $UN
             ]);
-            
+
             $response["Code"] = 0;
             $response["Message"] = "SUCCESS";
             $httpcode = 200;
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             $response["Code"] = 1;
             $response["Error"] = $e->getMessage();
             $response["Message"] = "";
@@ -413,7 +417,8 @@ class BookingController extends Controller
         return response()->json($response, $httpcode);
     }
 
-    public function updateLogTransactionDevice($randomCode, $status) {
+    public function updateLogTransactionDevice($randomCode, $status)
+    {
         $httpcode = 500;
         $response = array(
             "Code" => 1,
@@ -434,7 +439,7 @@ class BookingController extends Controller
             $response["Error"] = null;
             $response["Message"] = "SUCCESS";
             $response["Data"] = null;
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             $response["Code"] = 1;
             $response["Error"] = $e->getMessage();
             $response["Message"] = "";
@@ -444,15 +449,16 @@ class BookingController extends Controller
         return response()->json($response, $httpcode);
     }
 
-    function getRandomCode($n) { 
-        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'; 
+    function getRandomCode($n)
+    {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $randomString = '';
-      
-        for ($i = 0; $i < $n; $i++) { 
-            $index = rand(0, strlen($characters) - 1); 
-            $randomString .= $characters[$index]; 
-        } 
-      
-        return $randomString; 
-    } 
+
+        for ($i = 0; $i < $n; $i++) {
+            $index = rand(0, strlen($characters) - 1);
+            $randomString .= $characters[$index];
+        }
+
+        return $randomString;
+    }
 }
